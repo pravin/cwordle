@@ -1,0 +1,12 @@
+[package]
+authors = ["Pravin Paratey"]
+description = "A console version of the popular wordle game"
+edition = "2021"
+name = "cwordle"
+version = "0.1.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+owo-colors = "3.2.0"
+rand = "0.8.4"
