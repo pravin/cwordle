@@ -1,6 +1,6 @@
 use owo_colors::OwoColorize;
 use rand::{prelude::ThreadRng, Rng};
-use std::{cmp, io};
+use std::{io, process};
 
 static WORD_LIST: &'static str = include_str!("word-list.txt");
 
@@ -18,33 +18,75 @@ fn choose_word() -> &'static str {
     &WORD_LIST[start..start + 5]
 }
 
-fn get_input() -> String {
+fn get_input() -> io::Result<String> {
     loop {
         let mut input = String::new();
-        io::stdin().read_line(&mut input);
-        if input.len() == 6 && WORD_LIST.contains(&input) {
-            return input[0..5].to_lowercase();
+        match io::stdin().read_line(&mut input) {
+            Ok(_) => {
+                if input.len() == 6 && WORD_LIST.contains(&input) {
+                    return Ok(input[0..5].to_lowercase());
+                }
+
+                print!("\x1b[1A\tPlease enter a valid 5-letter word\n");
+            }
+            Err(e) => return Err(e),
         }
-        print!("\x1b[1A\tPlease enter a valid 5-letter word\n");
     }
 }
+
+fn intro() {
+    println!();
+    print!("       ");
+    print_text("cwordle".to_string(), [1, 0, 2, 2, 1, 0, 1].to_vec());
+    println!("\nTo learn how to play, type cwordle --help");
+    println!();
+    println!("Enter your first guess and hit Enter.\n");
+}
+
+fn show_help() {
+    println!("How to Play\n");
+    println!("Guess the word in 6 tries to win.");
+    println!("After each guess, the colors will help show how close your guess was.");
+    println!("For example, if the word was glued and you typed grape\n");
+
+    print_text("grape".to_string(), [1, 0, 0, 0, 2].to_vec());
+    println!("\n1. The letter g is in the right place.");
+    println!("\n2. The letter e is present in the word, but in the wrong place.");
+    println!("\n3. The letters r, a and p aren't present in the word.");
+    std::process::exit(0);
+}
+
+fn print_text(text: String, colors: Vec<i32>) {
+    for (i, c) in text.chars().enumerate() {
+        let paddedchar = format!(" {} ", c);
+        if colors[i] == 1 {
+            print!("{} ", paddedchar.green().reversed());
+        } else if colors[i] == 2 {
+            print!("{} ", paddedchar.yellow().reversed());
+        } else {
+            print!("{} ", paddedchar.reversed());
+        }
+    }
+}
+
 fn main() -> io::Result<()> {
+    show_help();
+    intro();
     let choice = choose_word().to_owned();
     //let choice = "elder";
     //println!("{}", choice);
     let mut winner = false;
     let mut count = 0;
     while !winner && count < 6 {
-        let input = get_input();
+        let input = get_input().unwrap();
 
-        print!("\x1b[2K\x1b[1A");
+        print!("\x1b[2K\x1b[1A"); // Delete line, move up
 
         if input == choice {
             winner = true;
         } else {
-            let end = cmp::min(5, input.len());
             let mut vchoice: Vec<char> = choice.chars().collect();
-            let mut colors: [i32; 5] = [0, 0, 0, 0, 0];
+            let mut colors: Vec<i32> = [0, 0, 0, 0, 0].to_vec();
 
             // First, check letters in the correct position
             for (i, c) in input.chars().enumerate() {
@@ -63,25 +105,21 @@ fn main() -> io::Result<()> {
                 }
             }
 
-            for i in 0..end {
-                let outchar = input.chars().nth(i).unwrap();
-                if colors[i] == 1 {
-                    print!("{}", outchar.to_string().green().reversed());
-                } else if colors[i] == 2 {
-                    print!("{}", outchar.to_string().yellow().reversed());
-                } else {
-                    print!("{}", outchar.to_string().reversed());
-                }
-            }
-            println!("\t{} turns left", 5 - count);
+            print_text(input, colors);
+
+            println!("\t{} tries left", 5 - count);
         }
         count += 1;
     }
 
     if winner {
-        println!("{}\tWell done!", choice.green().reversed());
+        println!();
+        print_text(choice, [1, 1, 1, 1, 1].to_vec());
+        println!("\tWell done!");
     } else {
-        println!("{}\tTry again!", choice.bright_red().reversed());
+        println!();
+        print_text(choice, [2, 2, 2, 2, 2].to_vec());
+        println!("\tTry again!");
     }
     Ok(())
 }
