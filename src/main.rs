@@ -25,7 +25,7 @@ fn get_input() -> String {
         if input.len() == 6 && WORD_LIST.contains(&input) {
             return input[0..5].to_lowercase();
         }
-        print!("\t Please enter a valid 5-letter word\n");
+        print!("\x1b[1A\tPlease enter a valid 5-letter word\n");
     }
 }
 fn main() -> io::Result<()> {
@@ -37,7 +37,7 @@ fn main() -> io::Result<()> {
     while !winner && count < 6 {
         let input = get_input();
 
-        print!("\t");
+        print!("\x1b[2K\x1b[1A");
 
         if input == choice {
             winner = true;
@@ -79,9 +79,9 @@ fn main() -> io::Result<()> {
     }
 
     if winner {
-        println!("\t{}\tWell done!", choice.green().reversed());
+        println!("{}\tWell done!", choice.green().reversed());
     } else {
-        println!("\t{}\tTry again!", choice.reversed());
+        println!("{}\tTry again!", choice.bright_red().reversed());
     }
     Ok(())
 }

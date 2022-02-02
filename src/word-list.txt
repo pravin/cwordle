@@ -1,4 +1,4 @@
-R"(abaci
+abaci
 aback
 abaft
 abase
@@ -4591,4 +4591,4 @@ zombi
 zonal
 zoned
 zones
-zooms)"
+zooms
