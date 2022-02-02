@@ -1,6 +1,9 @@
 use owo_colors::OwoColorize;
-use rand::{prelude::ThreadRng, Rng};
-use std::{io, process};
+use rand::{
+    prelude::{SliceRandom, ThreadRng},
+    Rng,
+};
+use std::{env, io, process};
 
 static WORD_LIST: &'static str = include_str!("word-list.txt");
 
@@ -23,8 +26,9 @@ fn get_input() -> io::Result<String> {
         let mut input = String::new();
         match io::stdin().read_line(&mut input) {
             Ok(_) => {
-                if input.len() == 6 && WORD_LIST.contains(&input) {
-                    return Ok(input[0..5].to_lowercase());
+                input = input[0..5].to_lowercase();
+                if input.len() == 5 && WORD_LIST.contains(&input) {
+                    return Ok(input);
                 }
 
                 print!("\x1b[1A\tPlease enter a valid 5-letter word\n");
@@ -38,14 +42,15 @@ fn intro() {
     println!();
     print!("       ");
     print_text("cwordle".to_string(), [1, 0, 2, 2, 1, 0, 1].to_vec());
-    println!("\nTo learn how to play, type cwordle --help");
-    println!();
-    println!("Enter your first guess and hit Enter.\n");
+    println!("\n\nType your first guess and hit Enter.\n");
 }
 
 fn show_help() {
-    println!("How to Play\n");
-    println!("Guess the word in 6 tries to win.");
+    let mut color_array = [0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1];
+    color_array.shuffle(&mut rand::thread_rng());
+    println!();
+    print_text("How to Play".to_string(), color_array.to_vec());
+    println!("\n\nGuess the word in 6 tries to win.");
     println!("After each guess, the colors will help show how close your guess was.");
     println!("For example, if the word was glued and you typed grape\n");
 
@@ -70,11 +75,13 @@ fn print_text(text: String, colors: Vec<i32>) {
 }
 
 fn main() -> io::Result<()> {
-    show_help();
+    let args: Vec<String> = env::args().collect();
+    if args.len() > 1 && args[1] == "--help" {
+        show_help();
+    }
     intro();
     let choice = choose_word().to_owned();
-    //let choice = "elder";
-    //println!("{}", choice);
+
     let mut winner = false;
     let mut count = 0;
     while !winner && count < 6 {
@@ -84,6 +91,8 @@ fn main() -> io::Result<()> {
 
         if input == choice {
             winner = true;
+            print!("\x1b[2K\x1b[1A");
+            println!();
         } else {
             let mut vchoice: Vec<char> = choice.chars().collect();
             let mut colors: Vec<i32> = [0, 0, 0, 0, 0].to_vec();
