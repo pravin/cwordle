@@ -1,0 +1,51 @@
+name: release
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [created]
+    
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build
+      run: cargo build --verbose
+    - name: Run tests
+      run: cargo test --verbose
+  release:
+    name: publish ${{ matrix.name }}
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+        - target: x86_64-pc-windows-gnu
+            suffix: windows-x86_64
+            archive: zip
+          - target: x86_64-unknown-linux-gun
+            suffix: linux-x86_64
+            archive: tar.xz
+          - target: x86_64-apple-darwin
+            suffix: darwin-x86_64
+            archive: tar.gz
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone test repository
+        uses: actions/checkout@v2
+      - uses: xhaiker/rust-release.action@v1.0.0
+        name: build ${{ matrix.name }}
+        with:
+          rust_target: ${{ matrix.target }}
+          archive_suffix: ${{ matrix.suffix }}
+          archive_types: ${{ matrix.archive }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
