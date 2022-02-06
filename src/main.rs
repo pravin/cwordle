@@ -3,7 +3,7 @@ use rand::{
     prelude::{SliceRandom, ThreadRng},
     Rng,
 };
-use std::{env, io, process};
+use std::{env, io};
 
 static WORD_LIST: &'static str = include_str!("word-list.txt");
 
@@ -26,9 +26,12 @@ fn get_input() -> io::Result<String> {
         let mut input = String::new();
         match io::stdin().read_line(&mut input) {
             Ok(_) => {
-                input = input[0..5].to_lowercase();
-                if input.len() == 5 && WORD_LIST.contains(&input) {
-                    return Ok(input);
+                input = input.to_lowercase();
+                if input.len() == 6 {
+                    input = input[0..5].to_string();
+                    if WORD_LIST.contains(&input) {
+                        return Ok(input);
+                    }
                 }
 
                 print!("\x1b[1A\tPlease enter a valid 5-letter word\n");
