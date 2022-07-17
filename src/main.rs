@@ -3,7 +3,8 @@ use rand::{
     prelude::{SliceRandom, ThreadRng},
     Rng,
 };
-use std::{env, io, process};
+use std::{env, io};
+mod game;
 
 static WORD_LIST: &'static str = include_str!("word-list.txt");
 
@@ -75,6 +76,9 @@ fn print_text(text: String, colors: Vec<i32>) {
 }
 
 fn main() -> io::Result<()> {
+    game::initgame();
+
+    /*
     let args: Vec<String> = env::args().collect();
     if args.len() > 1 && args[1] == "--help" {
         show_help();
@@ -129,6 +133,6 @@ fn main() -> io::Result<()> {
         println!();
         print_text(choice, [2, 2, 2, 2, 2].to_vec());
         println!("\tTry again!");
-    }
+    }*/
     Ok(())
 }
