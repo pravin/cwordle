@@ -76,7 +76,9 @@ fn print_text(text: String, colors: Vec<i32>) {
 }
 
 fn main() -> io::Result<()> {
-    game::initgame();
+    game::init_game();
+    game::game_loop();
+    game::end_game();
 
     /*
     let args: Vec<String> = env::args().collect();

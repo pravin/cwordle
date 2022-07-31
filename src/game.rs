@@ -3,7 +3,7 @@ use pancurses::{
     Window, COLOR_BLACK, COLOR_GREEN, COLOR_PAIR, COLOR_WHITE, COLOR_YELLOW,
 };
 
-pub fn initgame() {
+pub fn init_game() {
     let win: Window = initscr();
 
     if win.get_max_y() < 20 || win.get_max_x() < 50 {
@@ -27,9 +27,6 @@ pub fn initgame() {
     draw_header(&win);
     draw_keyboard(&win);
     draw_footer(&win);
-
-    win.getch();
-    endwin();
 }
 
 fn draw_header(win: &Window) {
@@ -50,6 +47,8 @@ fn draw_keyboard(win: &Window) {
     let keyboard = "qwertyuiopasdfghjklzxcvbnm";
     let mut x_pos: i32 = (win.get_max_x() - 36) / 2; // 9 letters per line
     let mut y_pos: i32 = win.get_max_y() - 6;
+
+    win.attrset(COLOR_PAIR(2)); // reset colors
     for j in 0..26 {
         win.mvaddstr(
             y_pos,
@@ -66,8 +65,22 @@ fn draw_keyboard(win: &Window) {
             }
         }
     }
+    win.attrset(COLOR_PAIR(1)); // reset colors
 }
 
 fn draw_footer(win: &Window) {
     win.mvaddstr(win.get_max_y() - 1, 2, " Press ? for help ");
+}
+
+pub fn game_loop(win: &Window) {
+    win.getch();
+    let mut winner = false;
+    let mut count = 0;
+    while !winner && count < 6 {
+        let get_input();
+    }
+}
+
+pub fn end_game(win: &Window) {
+    endwin();
 }
