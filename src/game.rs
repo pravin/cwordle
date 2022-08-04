@@ -3,7 +3,7 @@ use pancurses::{
     Window, COLOR_BLACK, COLOR_GREEN, COLOR_PAIR, COLOR_WHITE, COLOR_YELLOW,
 };
 
-pub fn init_game() {
+pub fn init_game() -> Window {
     let win: Window = initscr();
 
     if win.get_max_y() < 20 || win.get_max_x() < 50 {
@@ -27,6 +27,7 @@ pub fn init_game() {
     draw_header(&win);
     draw_keyboard(&win);
     draw_footer(&win);
+    win
 }
 
 fn draw_header(win: &Window) {
@@ -73,12 +74,17 @@ fn draw_footer(win: &Window) {
 }
 
 pub fn game_loop(win: &Window) {
-    win.getch();
     let mut winner = false;
     let mut count = 0;
     while !winner && count < 6 {
-        let get_input();
+        let word = get_valid_word(win);
+        //let get_input();
+        count += 1;
     }
+}
+
+fn get_valid_word(win: &Window) {
+    let c = win.getch();
 }
 
 pub fn end_game(win: &Window) {
