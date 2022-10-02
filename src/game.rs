@@ -3,6 +3,8 @@ use pancurses::{
     Window, COLOR_BLACK, COLOR_BLUE, COLOR_GREEN, COLOR_PAIR, COLOR_WHITE, COLOR_YELLOW,
 };
 
+use super::words;
+
 pub fn init_game() -> Window {
     let win: Window = initscr();
 
@@ -28,6 +30,9 @@ pub fn init_game() -> Window {
     draw_header(&win);
     draw_keyboard(&win);
     draw_footer(&win);
+
+    // Load valid 5-letter words in memory
+
     win
 }
 
@@ -77,16 +82,28 @@ fn draw_footer(win: &Window) {
 pub fn game_loop(win: &Window) {
     let mut winner = false;
     let mut count = 0;
+    let chosen_word: &str = words::choose_word();
     while !winner && count < 6 {
-        let word = get_valid_word(win, count);
+        let x_pos: i32 = (win.get_max_x() - 20) / 2; // 20 = 5 chars * 4 spaces for each char
+        let y_pos: i32 = (win.get_max_y() / 2) - 8 + count * 2; // 6 rows * 2 spaces for each row
+        win.mv(y_pos, x_pos);
+        let word = get_word(win, y_pos, x_pos);
+        if !words::word_isvalid(word.as_str()) {
+            // Error message
+            show_error("Please input a valid word");
+            // Redraw line
+            win.mvaddstr(y_pos, x_pos, "                    ");
+            continue;
+        }
+        if word.eq(chosen_word) {
+            winner = true
+        }
         count += 1;
     }
 }
 
-fn get_valid_word(win: &Window, row: i32) -> String {
+fn get_word(win: &Window, y_pos: i32, x_pos: i32) -> String {
     let mut count: i32 = 0;
-    let x_pos: i32 = (win.get_max_x() - 20) / 2; // 20 = 5 chars * 4 spaces for each char
-    let y_pos: i32 = (win.get_max_y() / 2) - 8 + row * 2; // 6 rows * 2 spaces for each row
     let mut input_array: [char; 5] = [' ', ' ', ' ', ' ', ' '];
 
     win.attrset(COLOR_PAIR(5));
@@ -97,14 +114,20 @@ fn get_valid_word(win: &Window, row: i32) -> String {
                     // Enter Key
                     break;
                 }
+                let keycode: u32 = ch.into();
+                if keycode == 127 && count > 0 {
+                    // Backspace Key
+                    count -= 1;
+                    win.attrset(COLOR_PAIR(1));
+                    win.mvaddstr(y_pos, count * 4 + x_pos, format!("   "));
+                    win.mv(y_pos, count * 4 + x_pos);
+                    win.attrset(COLOR_PAIR(5));
+                }
                 if !ch.is_alphabetic() || count >= 5 {
                     continue;
                 }
                 input_array[count as usize] = ch;
                 win.mvaddstr(y_pos, count * 4 + x_pos, format!(" {} ", ch));
-            }
-            Some(Input::KeyEnter) => {
-                win.printw("HELLO");
             }
             Some(_input) => continue,
             None => continue,
@@ -113,7 +136,6 @@ fn get_valid_word(win: &Window, row: i32) -> String {
     }
     win.attrset(COLOR_PAIR(1)); // Reset colors
 
-    // Check if word is valid
     let input_word: String = input_array.iter().collect();
     input_word
 }
@@ -121,3 +143,5 @@ fn get_valid_word(win: &Window, row: i32) -> String {
 pub fn end_game(win: &Window) {
     endwin();
 }
+
+fn show_error(err_string: &str) {}
