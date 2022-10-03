@@ -95,7 +95,7 @@ pub fn game_loop(win: &Window) {
         let word = get_word(win, y_pos, x_pos);
         if !words::word_isvalid(word.as_str()) {
             // Error message
-            show_error("Please input a valid word");
+            show_error(win);
             // Redraw line
             win.mvaddstr(y_pos, x_pos, "                    ");
             continue;
@@ -106,6 +106,8 @@ pub fn game_loop(win: &Window) {
         }
         count += 1;
     }
+
+    show_win(win, winner);
 }
 
 fn get_word(win: &Window, y_pos: i32, x_pos: i32) -> String {
@@ -184,8 +186,27 @@ fn color_input_word(choice: &str, input: &str, win: &Window, y_pos: i32, x_pos: 
     }
 }
 
-pub fn end_game(win: &Window) {
+pub fn end_game() {
     endwin();
 }
 
-fn show_error(err_string: &str) {}
+fn show_error(win: &Window) {
+    win.attrset(COLOR_PAIR(6));
+    win.mvaddstr(win.get_max_y() - 1, 2, "Please input a valid word");
+    win.getch();
+    win.attrset(COLOR_PAIR(1));
+    win.mvaddstr(win.get_max_y() - 1, 2, "                         ");
+    draw_footer(win)
+}
+
+fn show_win(win: &Window, game_won: bool) {
+    if game_won {
+        win.attrset(COLOR_PAIR(3));
+        win.mvaddstr(win.get_max_y() - 1, 2, "Congratulations! You win :-)");
+    } else {
+        win.attrset(COLOR_PAIR(2));
+        win.mvaddstr(win.get_max_y() - 1, 2, "Sorry! You lost :-(");
+    }
+    win.getch();
+    win.attrset(COLOR_PAIR(1));
+}
