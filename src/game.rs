@@ -1,6 +1,7 @@
 use pancurses::{
     cbreak, endwin, has_colors, init_pair, initscr, noecho, start_color, use_default_colors, Input,
-    Window, COLOR_BLACK, COLOR_BLUE, COLOR_GREEN, COLOR_PAIR, COLOR_WHITE, COLOR_YELLOW, OK,
+    Window, COLOR_BLACK, COLOR_BLUE, COLOR_GREEN, COLOR_PAIR, COLOR_RED, COLOR_WHITE, COLOR_YELLOW,
+    OK,
 };
 
 use super::words;
@@ -99,6 +100,7 @@ pub fn game_loop(win: &Window) {
             win.mvaddstr(y_pos, x_pos, "                    ");
             continue;
         }
+        color_input_word(chosen_word, word.as_str(), win, y_pos, x_pos);
         if word.eq(chosen_word) {
             winner = true
         }
@@ -123,7 +125,7 @@ fn get_word(win: &Window, y_pos: i32, x_pos: i32) -> String {
                     // Backspace Key
                     count -= 1;
                     win.attrset(COLOR_PAIR(1));
-                    win.mvaddstr(y_pos, count * 4 + x_pos, format!("   "));
+                    win.mvaddstr(y_pos, count * 4 + x_pos, "   ");
                     win.mv(y_pos, count * 4 + x_pos);
                     win.attrset(COLOR_PAIR(5));
                 }
@@ -142,6 +144,44 @@ fn get_word(win: &Window, y_pos: i32, x_pos: i32) -> String {
 
     let input_word: String = input_array.iter().collect();
     input_word
+}
+
+fn color_input_word(choice: &str, input: &str, win: &Window, y_pos: i32, x_pos: i32) {
+    let mut vchoice: Vec<char> = choice.chars().collect();
+    let mut colors: Vec<i32> = [0, 0, 0, 0, 0].to_vec();
+
+    // First, check letters in the correct position
+    for (i, c) in input.chars().enumerate() {
+        if c == vchoice[i] {
+            colors[i] = 1; // 1 = Right letter, right place
+            vchoice[i] = '.';
+        }
+    }
+    // Next check for letters which are present in the word, but in the wrong position
+    for (i, c) in input.chars().enumerate() {
+        if colors[i] == 0 && vchoice.contains(&c) {
+            colors[i] = 2; // 2 = Right letter, wrong place
+            if let Some(idx) = vchoice.iter().position(|x| x == &c) {
+                vchoice[idx] = '.';
+            }
+        }
+    }
+
+    for (i, c) in input.chars().enumerate() {
+        if colors[i] == 1 {
+            win.attrset(COLOR_PAIR(3));
+            win.mvaddstr(y_pos, (i as i32) * 4 + x_pos, format!(" {} ", c));
+            win.attrset(COLOR_PAIR(1));
+        } else if colors[i] == 2 {
+            win.attrset(COLOR_PAIR(4));
+            win.mvaddstr(y_pos, (i as i32) * 4 + x_pos, format!(" {} ", c));
+            win.attrset(COLOR_PAIR(1));
+        } else {
+            win.attrset(COLOR_PAIR(2));
+            win.mvaddstr(y_pos, (i as i32) * 4 + x_pos, format!(" {} ", c));
+            win.attrset(COLOR_PAIR(1));
+        }
+    }
 }
 
 pub fn end_game(win: &Window) {
