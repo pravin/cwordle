@@ -1,6 +1,6 @@
 use pancurses::{
     cbreak, endwin, has_colors, init_pair, initscr, noecho, start_color, use_default_colors, Input,
-    Window, COLOR_BLACK, COLOR_BLUE, COLOR_GREEN, COLOR_PAIR, COLOR_WHITE, COLOR_YELLOW,
+    Window, COLOR_BLACK, COLOR_BLUE, COLOR_GREEN, COLOR_PAIR, COLOR_WHITE, COLOR_YELLOW, OK,
 };
 
 use super::words;
@@ -9,7 +9,7 @@ pub fn init_game() -> Window {
     let win: Window = initscr();
 
     if win.get_max_y() < 20 || win.get_max_x() < 50 {
-        panic!("You need at least a 30x20 terminal window to play this game.");
+        panic!("You need at least a 50x20 terminal window to play this game.");
     }
 
     if !has_colors() {
@@ -17,12 +17,16 @@ pub fn init_game() -> Window {
     }
 
     start_color();
-    use_default_colors();
-    init_pair(1, COLOR_WHITE, COLOR_BLACK);
+    if use_default_colors() == OK {
+        init_pair(1, COLOR_WHITE, -1);
+    } else {
+        init_pair(1, COLOR_WHITE, COLOR_BLACK);
+    }
     init_pair(2, COLOR_BLACK, COLOR_WHITE);
     init_pair(3, COLOR_BLACK, COLOR_GREEN);
     init_pair(4, COLOR_BLACK, COLOR_YELLOW);
     init_pair(5, COLOR_WHITE, COLOR_BLUE);
+    init_pair(6, COLOR_WHITE, COLOR_RED);
 
     cbreak();
     noecho();
