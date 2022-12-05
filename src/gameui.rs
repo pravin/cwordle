@@ -1,10 +1,12 @@
+use std::{fmt::format, thread::sleep, time};
+
 use pancurses::{
     cbreak, endwin, has_colors, init_pair, initscr, noecho, start_color, use_default_colors, Input,
     Window, COLOR_BLACK, COLOR_BLUE, COLOR_GREEN, COLOR_PAIR, COLOR_RED, COLOR_WHITE, COLOR_YELLOW,
     OK,
 };
 
-use super::words;
+use super::gamestate::{GameData, GameStatus, KeyBoardHelperState};
 
 pub fn init_game() -> Window {
     let win: Window = initscr();
@@ -33,7 +35,6 @@ pub fn init_game() -> Window {
     noecho();
 
     draw_header(&win);
-    draw_keyboard(&win);
     draw_footer(&win);
 
     // Load valid 5-letter words in memory
@@ -55,18 +56,24 @@ fn draw_header(win: &Window) {
     win.attrset(COLOR_PAIR(1)); // reset colors
 }
 
-fn draw_keyboard(win: &Window) {
+pub fn draw_keyboard(win: &Window, game_data: &GameData) {
     let keyboard = "qwertyuiopasdfghjklzxcvbnm";
     let mut x_pos: i32 = (win.get_max_x() - 36) / 2; // 9 letters per line
     let mut y_pos: i32 = win.get_max_y() - 6;
 
+    let keyboard_helper = game_data.keyboard_helper();
     win.attrset(COLOR_PAIR(2)); // reset colors
     for j in 0..26 {
-        win.mvaddstr(
-            y_pos,
-            x_pos,
-            format!(" {} ", keyboard.as_bytes()[j] as char),
-        );
+        let the_char = keyboard.as_bytes()[j] as char;
+        let key_index = the_char as usize - 97;
+        // Get color of char
+        match keyboard_helper[key_index] {
+            KeyBoardHelperState::GRAY => win.attrset(COLOR_PAIR(6)),
+            KeyBoardHelperState::AMBER => win.attrset(COLOR_PAIR(4)),
+            KeyBoardHelperState::GREEN => win.attrset(COLOR_PAIR(3)),
+            KeyBoardHelperState::NONE => win.attrset(COLOR_PAIR(2)),
+        };
+        win.mvaddstr(y_pos, x_pos, format!(" {} ", the_char));
         x_pos += 4;
         if (j + 1) % 10 == 0 {
             y_pos += 2;
@@ -84,37 +91,15 @@ fn draw_footer(win: &Window) {
     win.mvaddstr(win.get_max_y() - 1, 2, " Press ? for help ");
 }
 
-pub fn game_loop(win: &Window) {
-    let mut winner = false;
-    let mut count = 0;
-    let chosen_word: &str = words::choose_word();
-    while !winner && count < 6 {
-        let x_pos: i32 = (win.get_max_x() - 20) / 2; // 20 = 5 chars * 4 spaces for each char
-        let y_pos: i32 = (win.get_max_y() / 2) - 8 + count * 2; // 6 rows * 2 spaces for each row
-        win.mv(y_pos, x_pos);
-        let word = get_word(win, y_pos, x_pos);
-        if !words::word_isvalid(word.as_str()) {
-            // Error message
-            show_error(win);
-            // Redraw line
-            win.mvaddstr(y_pos, x_pos, "                    ");
-            continue;
-        }
-        color_input_word(chosen_word, word.as_str(), win, y_pos, x_pos);
-        if word.eq(chosen_word) {
-            winner = true
-        }
-        count += 1;
-    }
+pub fn get_user_input(win: &Window, game_data: &GameData) -> String {
+    // Move cursor to the right position
+    let (x_pos, y_pos) = get_xy_pos(&win, &game_data);
 
-    show_win(win, winner);
-}
-
-fn get_word(win: &Window, y_pos: i32, x_pos: i32) -> String {
     let mut count: i32 = 0;
     let mut input_array: [char; 5] = [' ', ' ', ' ', ' ', ' '];
 
     win.attrset(COLOR_PAIR(5));
+    win.mv(y_pos, x_pos);
     loop {
         match win.getch() {
             Some(Input::Character(ch)) => {
@@ -145,10 +130,28 @@ fn get_word(win: &Window, y_pos: i32, x_pos: i32) -> String {
     win.attrset(COLOR_PAIR(1)); // Reset colors
 
     let input_word: String = input_array.iter().collect();
-    input_word
+
+    input_word.to_ascii_lowercase()
 }
 
-fn color_input_word(choice: &str, input: &str, win: &Window, y_pos: i32, x_pos: i32) {
+pub fn clear_incorrect_word(win: &Window, game_data: &GameData) {
+    let (x_pos, y_pos) = get_xy_pos(&win, &game_data);
+
+    show_error(win);
+    // Print blank line
+    win.mvaddstr(y_pos, x_pos, "                    ");
+    win.mv(y_pos, x_pos);
+}
+
+fn get_xy_pos(win: &Window, game_data: &GameData) -> (i32, i32) {
+    let x_pos: i32 = (win.get_max_x() - 20) / 2; // 20 = 5 chars * 4 spaces for each char
+    let y_pos: i32 = (win.get_max_y() / 2) - 8 + (game_data.guess_count() * 2) as i32; // 6 rows * 2 spaces for each row
+    (x_pos, y_pos)
+}
+
+pub fn color_input_word(win: &Window, game_data: &GameData, input: &str) {
+    let (x_pos, y_pos) = get_xy_pos(&win, &game_data);
+    let choice = game_data.winning_word();
     let mut vchoice: Vec<char> = choice.chars().collect();
     let mut colors: Vec<i32> = [0, 0, 0, 0, 0].to_vec();
 
@@ -186,7 +189,24 @@ fn color_input_word(choice: &str, input: &str, win: &Window, y_pos: i32, x_pos: 
     }
 }
 
-pub fn end_game() {
+pub fn end_game(win: &Window, game_data: GameData) {
+    assert!(game_data.status() != GameStatus::PLAYING);
+    if game_data.status() == GameStatus::WON {
+        win.attrset(COLOR_PAIR(3));
+        win.mvaddstr(win.get_max_y() - 1, 2, "Congratulations! You win :-)");
+    } else {
+        win.attrset(COLOR_PAIR(2));
+        win.mvaddstr(
+            win.get_max_y() - 1,
+            2,
+            format!(
+                "The word was {}. Sorry! You lost :-(",
+                game_data.winning_word(),
+            ),
+        );
+    }
+    win.getch();
+    win.attrset(COLOR_PAIR(1));
     endwin();
 }
 
@@ -197,16 +217,4 @@ fn show_error(win: &Window) {
     win.attrset(COLOR_PAIR(1));
     win.mvaddstr(win.get_max_y() - 1, 2, "                         ");
     draw_footer(win)
-}
-
-fn show_win(win: &Window, game_won: bool) {
-    if game_won {
-        win.attrset(COLOR_PAIR(3));
-        win.mvaddstr(win.get_max_y() - 1, 2, "Congratulations! You win :-)");
-    } else {
-        win.attrset(COLOR_PAIR(2));
-        win.mvaddstr(win.get_max_y() - 1, 2, "Sorry! You lost :-(");
-    }
-    win.getch();
-    win.attrset(COLOR_PAIR(1));
 }
