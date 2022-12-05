@@ -10,3 +10,7 @@ version = "0.1.0"
 [dependencies]
 owo-colors = "3.2.0"
 rand = "0.8.4"
+
+[dependencies.pancurses]
+features = ["win32"]
+version = "0.17"
