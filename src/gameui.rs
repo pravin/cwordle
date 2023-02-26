@@ -1,5 +1,3 @@
-use std::{fmt::format, thread::sleep, time};
-
 use pancurses::{
     cbreak, endwin, has_colors, init_pair, initscr, noecho, start_color, use_default_colors, Input,
     Window, COLOR_BLACK, COLOR_BLUE, COLOR_GREEN, COLOR_PAIR, COLOR_RED, COLOR_WHITE, COLOR_YELLOW,
@@ -88,7 +86,7 @@ pub fn draw_keyboard(win: &Window, game_data: &GameData) {
 }
 
 fn draw_footer(win: &Window) {
-    win.mvaddstr(win.get_max_y() - 1, 2, " Press ? for help ");
+    win.mvaddstr(win.get_max_y() - 1, 2, " Press Ctrl+C to quit ");
 }
 
 pub fn get_user_input(win: &Window, game_data: &GameData) -> String {

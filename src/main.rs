@@ -3,7 +3,6 @@ mod gamestate;
 mod gameui;
 mod words;
 
-
 fn main() -> io::Result<()> {
     // Init game screen or panic
     let win = gameui::init_game();
@@ -31,9 +30,7 @@ fn main() -> io::Result<()> {
         // Update State
         game_data.new_guess(&user_input);
     }
-    // Update UI with Game State
-    // Play Again?
-    //let game_data1 = gameui::game_loop(&win);
+    // End game
     gameui::end_game(&win, game_data);
 
     Ok(())
