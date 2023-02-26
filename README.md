@@ -1,16 +1,19 @@
 # cwordle
 
-Play the popular game worldle in a terminal. Works with all ANSI terminals on Linux and Mac.
+Play the popular game wordle in a terminal. Works with all ANSI terminals on Linux, Windows and Mac.
 
 ## Screenshots
-![Successfully guessing the word](img/1.png)
-Successfully guessing the word
+![Starting screen: cwordle](img/1.png)
+Starting screen
 
 ![Image](img/2.png)
 Partway into playing a wordle
 
 ![Image](img/3.png)
-Entering an invalid word
+Winning the game
 
 ![Image](img/4.png)
-Unsuccessful in guessing the word
+Entering an non dictionary word
+
+![Image](img/5.png)
+Losing the game
