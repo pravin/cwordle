@@ -1,3 +1,5 @@
+#![crate_name = "cwordle"]
+
 use std::io;
 mod gamestate;
 mod gameui;
