@@ -3,14 +3,14 @@
 use super::words;
 use super::config::{Config, ALPHABET_SIZE, ASCII_LOWERCASE_A, WORD_LENGTH};
 
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum GameStatus {
     PLAYING = 0,
     WON = 1,
     LOST = 2,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum KeyBoardHelperState {
     NONE = 0,
     GRAY = 1,
@@ -142,5 +142,182 @@ impl GameData {
 
     pub fn keyboard_helper(&self) -> [KeyBoardHelperState; ALPHABET_SIZE] {
         self.keyboard_helper
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn create_test_config(hard_mode: bool, max_guesses: usize, word: Option<String>) -> Config {
+        Config {
+            hard_mode,
+            max_guesses,
+            stats: false,
+            reset_stats: false,
+            word,
+            no_color: false,
+        }
+    }
+
+    #[test]
+    fn test_new_game_initialization() {
+        let config = create_test_config(false, 6, Some("tests".to_string()));
+        let game = GameData::new(&config);
+
+        assert_eq!(game.status(), GameStatus::PLAYING);
+        assert_eq!(game.guess_count(), 0);
+        assert_eq!(game.winning_word(), "tests");
+        assert_eq!(game.max_guesses(), 6);
+        assert!(!game.is_hard_mode());
+        assert_eq!(game.revealed_letters().len(), 0);
+    }
+
+    #[test]
+    fn test_winning_guess() {
+        let config = create_test_config(false, 6, Some("apple".to_string()));
+        let mut game = GameData::new(&config);
+
+        let result = game.new_guess(&"apple".to_string());
+        assert!(result.is_ok());
+        assert_eq!(game.status(), GameStatus::WON);
+        assert_eq!(game.guess_count(), 1);
+    }
+
+    #[test]
+    fn test_losing_game() {
+        let config = create_test_config(false, 3, Some("apple".to_string()));
+        let mut game = GameData::new(&config);
+
+        game.new_guess(&"tests".to_string()).unwrap();
+        assert_eq!(game.status(), GameStatus::PLAYING);
+
+        game.new_guess(&"bread".to_string()).unwrap();
+        assert_eq!(game.status(), GameStatus::PLAYING);
+
+        game.new_guess(&"lemon".to_string()).unwrap();
+        assert_eq!(game.status(), GameStatus::LOST);
+        assert_eq!(game.guess_count(), 3);
+    }
+
+    #[test]
+    fn test_keyboard_helper_correct_position() {
+        let config = create_test_config(false, 6, Some("apple".to_string()));
+        let mut game = GameData::new(&config);
+
+        game.new_guess(&"ankle".to_string()).unwrap();
+
+        let keyboard = game.keyboard_helper();
+        let a_index = 'a' as usize - ASCII_LOWERCASE_A;
+        assert_eq!(keyboard[a_index], KeyBoardHelperState::GREEN); // 'a' is correct
+    }
+
+    #[test]
+    fn test_keyboard_helper_wrong_position() {
+        let config = create_test_config(false, 6, Some("apple".to_string()));
+        let mut game = GameData::new(&config);
+
+        game.new_guess(&"plumb".to_string()).unwrap();
+
+        let keyboard = game.keyboard_helper();
+        let p_index = 'p' as usize - ASCII_LOWERCASE_A;
+        assert_eq!(keyboard[p_index], KeyBoardHelperState::AMBER); // 'p' exists but wrong position
+    }
+
+    #[test]
+    fn test_keyboard_helper_incorrect_letter() {
+        let config = create_test_config(false, 6, Some("apple".to_string()));
+        let mut game = GameData::new(&config);
+
+        game.new_guess(&"tests".to_string()).unwrap();
+
+        let keyboard = game.keyboard_helper();
+        let t_index = 't' as usize - ASCII_LOWERCASE_A;
+        assert_eq!(keyboard[t_index], KeyBoardHelperState::GRAY); // 't' not in word
+    }
+
+    #[test]
+    fn test_hard_mode_revealed_letters() {
+        let config = create_test_config(true, 6, Some("apple".to_string()));
+        let mut game = GameData::new(&config);
+
+        game.new_guess(&"ankle".to_string()).unwrap();
+
+        assert!(game.revealed_letters().contains(&'a'));
+        assert!(game.revealed_letters().contains(&'l'));
+        assert!(game.revealed_letters().contains(&'e'));
+    }
+
+    #[test]
+    fn test_hard_mode_constraint_violation() {
+        let config = create_test_config(true, 6, Some("apple".to_string()));
+        let mut game = GameData::new(&config);
+
+        game.new_guess(&"ankle".to_string()).unwrap();
+
+        // Try to guess a word without revealed letters
+        let result = game.new_guess(&"birds".to_string());
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("must use revealed letter"));
+    }
+
+    #[test]
+    fn test_hard_mode_constraint_satisfied() {
+        let config = create_test_config(true, 6, Some("apple".to_string()));
+        let mut game = GameData::new(&config);
+
+        game.new_guess(&"ankle".to_string()).unwrap();
+
+        // Guess contains revealed letters 'a', 'l', 'e'
+        let result = game.new_guess(&"abler".to_string());
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_multiple_guesses() {
+        let config = create_test_config(false, 6, Some("table".to_string()));
+        let mut game = GameData::new(&config);
+
+        game.new_guess(&"tests".to_string()).unwrap();
+        assert_eq!(game.guess_count(), 1);
+        assert_eq!(game.status(), GameStatus::PLAYING);
+
+        game.new_guess(&"train".to_string()).unwrap();
+        assert_eq!(game.guess_count(), 2);
+        assert_eq!(game.status(), GameStatus::PLAYING);
+
+        game.new_guess(&"table".to_string()).unwrap();
+        assert_eq!(game.guess_count(), 3);
+        assert_eq!(game.status(), GameStatus::WON);
+    }
+
+    #[test]
+    fn test_max_guesses_customization() {
+        let config = create_test_config(false, 2, Some("apple".to_string()));
+        let mut game = GameData::new(&config);
+
+        game.new_guess(&"tests".to_string()).unwrap();
+        assert_eq!(game.status(), GameStatus::PLAYING);
+
+        game.new_guess(&"bread".to_string()).unwrap();
+        assert_eq!(game.status(), GameStatus::LOST);
+        assert_eq!(game.guess_count(), 2);
+    }
+
+    #[test]
+    fn test_keyboard_helper_priority() {
+        // Test that GREEN takes priority over AMBER
+        let config = create_test_config(false, 6, Some("aback".to_string()));
+        let mut game = GameData::new(&config);
+
+        // First guess: 'a' is in wrong position (should be AMBER)
+        game.new_guess(&"beans".to_string()).unwrap();
+
+        // Second guess: 'a' is in correct position (should be GREEN)
+        game.new_guess(&"abler".to_string()).unwrap();
+
+        let keyboard = game.keyboard_helper();
+        let a_index = 'a' as usize - ASCII_LOWERCASE_A;
+        assert_eq!(keyboard[a_index], KeyBoardHelperState::GREEN);
     }
 }

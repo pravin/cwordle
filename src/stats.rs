@@ -103,3 +103,182 @@ impl StatsManager {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_game_stats_default() {
+        let stats = GameStats::default();
+        assert_eq!(stats.games_played, 0);
+        assert_eq!(stats.games_won, 0);
+        assert_eq!(stats.current_streak, 0);
+        assert_eq!(stats.max_streak, 0);
+        assert_eq!(stats.win_percentage(), 0.0);
+        assert_eq!(stats.average_guesses(), 0.0);
+    }
+
+    #[test]
+    fn test_record_win() {
+        let mut stats = GameStats::default();
+        stats.record_game(true, Some(3));
+
+        assert_eq!(stats.games_played, 1);
+        assert_eq!(stats.games_won, 1);
+        assert_eq!(stats.current_streak, 1);
+        assert_eq!(stats.max_streak, 1);
+        assert_eq!(stats.guess_distribution.get(&3), Some(&1));
+        assert_eq!(stats.win_percentage(), 100.0);
+        assert_eq!(stats.average_guesses(), 3.0);
+    }
+
+    #[test]
+    fn test_record_loss() {
+        let mut stats = GameStats::default();
+        stats.record_game(false, None);
+
+        assert_eq!(stats.games_played, 1);
+        assert_eq!(stats.games_won, 0);
+        assert_eq!(stats.current_streak, 0);
+        assert_eq!(stats.max_streak, 0);
+        assert_eq!(stats.win_percentage(), 0.0);
+    }
+
+    #[test]
+    fn test_win_streak() {
+        let mut stats = GameStats::default();
+
+        stats.record_game(true, Some(3));
+        assert_eq!(stats.current_streak, 1);
+        assert_eq!(stats.max_streak, 1);
+
+        stats.record_game(true, Some(4));
+        assert_eq!(stats.current_streak, 2);
+        assert_eq!(stats.max_streak, 2);
+
+        stats.record_game(true, Some(2));
+        assert_eq!(stats.current_streak, 3);
+        assert_eq!(stats.max_streak, 3);
+    }
+
+    #[test]
+    fn test_streak_broken_by_loss() {
+        let mut stats = GameStats::default();
+
+        stats.record_game(true, Some(3));
+        stats.record_game(true, Some(4));
+        assert_eq!(stats.current_streak, 2);
+        assert_eq!(stats.max_streak, 2);
+
+        stats.record_game(false, None);
+        assert_eq!(stats.current_streak, 0);
+        assert_eq!(stats.max_streak, 2);
+    }
+
+    #[test]
+    fn test_max_streak_tracking() {
+        let mut stats = GameStats::default();
+
+        stats.record_game(true, Some(3));
+        stats.record_game(true, Some(4));
+        assert_eq!(stats.max_streak, 2);
+
+        stats.record_game(false, None);
+
+        stats.record_game(true, Some(2));
+        stats.record_game(true, Some(3));
+        stats.record_game(true, Some(4));
+
+        assert_eq!(stats.current_streak, 3);
+        assert_eq!(stats.max_streak, 3);
+    }
+
+    #[test]
+    fn test_guess_distribution() {
+        let mut stats = GameStats::default();
+
+        stats.record_game(true, Some(1));
+        stats.record_game(true, Some(2));
+        stats.record_game(true, Some(2));
+        stats.record_game(true, Some(3));
+        stats.record_game(true, Some(3));
+        stats.record_game(true, Some(3));
+
+        assert_eq!(stats.guess_distribution.get(&1), Some(&1));
+        assert_eq!(stats.guess_distribution.get(&2), Some(&2));
+        assert_eq!(stats.guess_distribution.get(&3), Some(&3));
+        assert_eq!(stats.guess_distribution.get(&4), None);
+    }
+
+    #[test]
+    fn test_win_percentage() {
+        let mut stats = GameStats::default();
+
+        stats.record_game(true, Some(3));
+        stats.record_game(true, Some(4));
+        stats.record_game(false, None);
+        stats.record_game(false, None);
+
+        assert_eq!(stats.games_played, 4);
+        assert_eq!(stats.games_won, 2);
+        assert_eq!(stats.win_percentage(), 50.0);
+    }
+
+    #[test]
+    fn test_average_guesses() {
+        let mut stats = GameStats::default();
+
+        stats.record_game(true, Some(2));
+        stats.record_game(true, Some(4));
+        stats.record_game(true, Some(6));
+
+        assert_eq!(stats.average_guesses(), 4.0);
+    }
+
+    #[test]
+    fn test_reset_stats() {
+        let mut stats = GameStats::default();
+
+        stats.record_game(true, Some(3));
+        stats.record_game(true, Some(4));
+
+        assert_eq!(stats.games_played, 2);
+
+        stats.reset();
+
+        assert_eq!(stats.games_played, 0);
+        assert_eq!(stats.games_won, 0);
+        assert_eq!(stats.current_streak, 0);
+        assert_eq!(stats.max_streak, 0);
+        assert!(stats.guess_distribution.is_empty());
+    }
+
+    #[test]
+    fn test_complex_game_scenario() {
+        let mut stats = GameStats::default();
+
+        stats.record_game(true, Some(3));
+        stats.record_game(true, Some(4));
+        stats.record_game(false, None);
+        stats.record_game(true, Some(2));
+        stats.record_game(true, Some(5));
+        stats.record_game(true, Some(3));
+        stats.record_game(true, Some(4));
+        stats.record_game(false, None);
+        stats.record_game(true, Some(6));
+        stats.record_game(true, Some(3));
+
+        assert_eq!(stats.games_played, 10);
+        assert_eq!(stats.games_won, 8);
+        assert_eq!(stats.current_streak, 2);
+        assert_eq!(stats.max_streak, 4);
+        assert_eq!(stats.win_percentage(), 80.0);
+
+        assert_eq!(stats.guess_distribution.get(&2), Some(&1));
+        assert_eq!(stats.guess_distribution.get(&3), Some(&3));
+        assert_eq!(stats.guess_distribution.get(&4), Some(&2));
+        assert_eq!(stats.guess_distribution.get(&5), Some(&1));
+        assert_eq!(stats.guess_distribution.get(&6), Some(&1));
+    }
+}
